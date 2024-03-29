@@ -1,28 +1,35 @@
-from flask import Flask
+from flask import Flask, request, render_template, session
 import random
 
-random_number=random.randint(0,9)
-print(random_number)
+app = Flask(__name__)
+app.secret_key = 'codewithdark'  # Needed for session management
 
-app=Flask(__name__)
+def initialize_game():
+    session['random_number'] = random.randint(0, 9)
+    session['attempts'] = 0
 
 @app.route('/')
 def home():
-    return "<h1>Guess a number between 0 and 9</h1>" \
-           "<img src='https://media.giphy.com/media/3o7aCSPqXE5C6T8tBC/giphy.gif'/>"
-@app.route("/<int:guess>")
-def guess_number(guess):
-    if guess > random_number:
-        return "<h1 style='color: purple'>Too high, try again!</h1>" \
-               "<img src='https://media.giphy.com/media/3o6ZtaO9BZHcOjmErm/giphy.gif'/>"
+    if 'random_number' not in session:
+        initialize_game()
+    return render_template("index.html")
 
-    elif guess < random_number:
-        return "<h1 style='color: red'>Too low, try again!</h1>"\
-               "<img src='https://media.giphy.com/media/jD4DwBtqPXRXa/giphy.gif'/>"
+@app.route("/guess", methods=["POST"])
+def guess_number():
+    if 'random_number' not in session:
+        initialize_game()
+
+    session['attempts'] += 1
+    name = request.form["name"]
+    guess = int(request.form["guess"])
+    if guess > session['random_number']:
+        result_message =  f"Hi {name}, {guess} is too high, try again!"
+    elif guess < session['random_number']:
+        result_message =  f"Hi {name}, {guess} is too Low, try again!"
     else:
-        return "<h1 style='color: green'>You found me!</h1>" \
-               "<img src='https://media.giphy.com/media/4T7e4DmcrP9du/giphy.gif'/>"
-
+        result_message = f"Congratulations {name}, you found the number {session['random_number']} in {session['attempts']} attempts!"
+        initialize_game()  # Reset the game after a correct guess
+    return render_template("index.html", result_message=result_message, attempts=session['attempts'])
 
 if __name__ == "__main__":
     app.run(debug=True)
